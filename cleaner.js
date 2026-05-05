@@ -200,43 +200,37 @@ function cleanCSV() {
   document.getElementById('results-section').classList.remove('hidden');
 }
 
-function autoSize(el) {
-  el.style.height = 'auto';
-  el.style.height = el.scrollHeight + 'px';
-}
-
 // --- Card editor ---
 function renderCardEditor() {
-  const tbody = document.getElementById('card-editor');
-  tbody.innerHTML = '';
+  const container = document.getElementById('card-editor');
+  container.innerHTML = '';
 
-  let visibleNum = 0;
   editableCards.forEach((card, idx) => {
     if (card.deleted) return;
-    visibleNum++;
 
-    const tr = document.createElement('tr');
-    tr.dataset.idx = idx;
-    tr.innerHTML = `
-      <td class="td-num">${visibleNum}</td>
-      <td class="td-sep"></td>
-      <td><textarea class="cell-input" data-idx="${idx}" data-field="front" oninput="handleCardEdit(this)" rows="1">${escapeHTML(card.front)}</textarea></td>
-      <td class="td-sep"></td>
-      <td><textarea class="cell-input" data-idx="${idx}" data-field="back" oninput="handleCardEdit(this)" rows="1">${escapeHTML(card.back)}</textarea></td>
-      <td class="td-sep"></td>
-      <td class="td-del">
-        <button class="del-btn" onclick="deleteCard(${idx})" title="Delete card" aria-label="Delete card">
-          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+    const el = document.createElement('div');
+    el.className = 'editor-card';
+    el.dataset.idx = idx;
+    el.innerHTML = `
+      <div class="editor-card-header">
+        <span class="card-num">Card ${idx + 1}</span>
+        <button class="delete-btn" onclick="deleteCard(${idx})" title="Delete card">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
             <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M3.5 3.5l.7 7.5a.5.5 0 00.5.5h4.6a.5.5 0 00.5-.5l.7-7.5"/>
           </svg>
         </button>
-      </td>
+      </div>
+      <div class="editor-field">
+        <label class="editor-label">Front</label>
+        <textarea class="editor-textarea" data-idx="${idx}" data-field="front" oninput="handleCardEdit(this)">${escapeHTML(card.front)}</textarea>
+      </div>
+      <div class="editor-field">
+        <label class="editor-label">Back</label>
+        <textarea class="editor-textarea" data-idx="${idx}" data-field="back" oninput="handleCardEdit(this)">${escapeHTML(card.back)}</textarea>
+      </div>
     `;
-    tbody.appendChild(tr);
+    container.appendChild(el);
   });
-
-  // Auto-size all textareas after DOM is populated
-  tbody.querySelectorAll('.cell-input').forEach(autoSize);
 
   updateCardCount();
 }
@@ -245,7 +239,6 @@ function handleCardEdit(el) {
   const idx = parseInt(el.dataset.idx);
   const field = el.dataset.field;
   editableCards[idx][field] = el.value;
-  autoSize(el);
   rebuildCSV();
 }
 

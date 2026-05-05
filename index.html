@@ -4,13 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NotebookLM CSV Cleaner</title>
-
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
       --bg: #f7f6f2;
       --surface: #ffffff;
       --surface2: #f0ede8;
@@ -22,6 +21,7 @@
       --accent: #2563eb;
       --accent-bg: #eff6ff;
       --success: #16a34a;
+      --success-bg: #f0fdf4;
       --danger: #dc2626;
       --danger-bg: #fef2f2;
       --radius: 10px;
@@ -41,33 +41,59 @@
         --accent: #60a5fa;
         --accent-bg: #1e2d45;
         --success: #4ade80;
+        --success-bg: #14281e;
         --danger: #f87171;
         --danger-bg: #2c1414;
       }
     }
 
     body {
-      font-family: var(--font-sans);
+      font-family: 'DM Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       padding: 2rem 1rem 4rem;
     }
 
-    .container { max-width: 640px; margin: 0 auto; }
-    header { margin-bottom: 2rem; }
-    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
 
     .logo-icon {
-      width: 36px; height: 36px;
+      width: 36px;
+      height: 36px;
       background: var(--accent-bg);
       border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border: 1px solid var(--border);
     }
 
-    h1 { font-size: 18px; font-weight: 500; letter-spacing: -0.01em; }
-    .subtitle { font-size: 13px; color: var(--text-muted); margin-left: 46px; }
+    h1 {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-left: 46px;
+    }
 
     .card {
       background: var(--surface);
@@ -86,137 +112,265 @@
       transition: background 0.15s, border-color 0.15s;
       margin-bottom: 1rem;
     }
-    .drop-zone:hover, .drop-zone.over { background: var(--surface2); border-color: var(--accent); }
 
-    .drop-icon { width: 32px; height: 32px; margin: 0 auto 10px; color: var(--text-muted); }
-    .drop-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
-    .drop-sub { font-size: 12px; color: var(--text-muted); }
+    .drop-zone:hover, .drop-zone.over {
+      background: var(--surface2);
+      border-color: var(--accent);
+    }
 
-    .divider { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
-    .divider-line { flex: 1; height: 1px; background: var(--border); }
-    .divider-text { font-size: 12px; color: var(--text-faint); }
+    .drop-icon {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto 10px;
+      color: var(--text-muted);
+    }
+
+    .drop-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .drop-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider-text {
+      font-size: 12px;
+      color: var(--text-faint);
+    }
 
     textarea {
-      width: 100%; height: 130px;
-      font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
-      resize: vertical; border-radius: var(--radius); padding: 10px 12px;
-      border: 1px solid var(--border); background: var(--surface2);
-      color: var(--text); outline: none; transition: border-color 0.15s;
+      width: 100%;
+      height: 130px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      resize: vertical;
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
     }
+
     textarea:focus { border-color: var(--accent); }
     textarea::placeholder { color: var(--text-faint); }
 
-    .actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
     button {
-      font-family: var(--font-sans); font-size: 13px; font-weight: 500;
-      padding: 8px 18px; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 18px;
+      border-radius: 8px;
       border: 1px solid var(--border-strong);
-      background: var(--surface); color: var(--text);
-      cursor: pointer; transition: background 0.12s, transform 0.1s;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.12s, transform 0.1s;
     }
+
     button:hover { background: var(--surface2); }
     button:active { transform: scale(0.98); }
-    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
     button.primary:hover { opacity: 0.9; }
-    button.ghost { border-color: transparent; color: var(--text-muted); }
+
+    button.ghost {
+      border-color: transparent;
+      color: var(--text-muted);
+    }
+
     button.ghost:hover { background: var(--surface2); }
 
-    .file-name { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+    .file-name {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+    }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; }
-    .stat-card { background: var(--surface2); border-radius: var(--radius); padding: 10px 14px; }
-    .stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-    .stat-value { font-size: 22px; font-weight: 500; font-family: var(--font-mono); }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 500;
+      font-family: 'DM Mono', monospace;
+    }
+
     .stat-value.success { color: var(--success); }
     .stat-value.muted { color: var(--text-muted); font-size: 14px; padding-top: 4px; }
 
-    /* ---- Compact table editor ---- */
+    /* ---- Card Editor ---- */
     .editor-header {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .editor-label-main {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .editor-hint {
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    .editor-card {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      transition: border-color 0.15s;
+    }
+
+    .editor-card:focus-within {
+      border-color: var(--accent);
+    }
+
+    .editor-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 8px;
     }
-    .editor-label-main {
-      font-size: 11px; font-weight: 500; color: var(--text-muted);
-      text-transform: uppercase; letter-spacing: 0.05em;
-    }
-    .editor-hint { font-size: 11px; color: var(--text-faint); }
 
-    .card-table {
-      width: 100%; border-collapse: collapse;
+    .card-num {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-faint);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .delete-btn {
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-faint);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .delete-btn:hover {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: rgba(220,38,38,0.15);
+    }
+
+    .editor-field {
+      margin-bottom: 8px;
+    }
+
+    .editor-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .editor-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-family: 'DM Mono', monospace;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      height: auto;
+      min-height: 52px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: vertical;
+      border-radius: 7px;
+      padding: 8px 10px;
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      table-layout: fixed;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
     }
 
-    .card-table thead th {
-      font-size: 10px; font-weight: 500; color: var(--text-faint);
-      text-transform: uppercase; letter-spacing: 0.06em;
-      font-family: var(--font-mono);
-      background: var(--surface2);
-      border-bottom: 1px solid var(--border);
-      padding: 5px 8px;
-      text-align: left;
+    .editor-textarea:focus {
+      border-color: var(--accent);
     }
-    .card-table thead th.col-num { width: 32px; text-align: right; padding-right: 6px; }
-    .card-table thead th.col-sep { width: 1px; padding: 0; background: var(--border); }
-    .card-table thead th.col-del { width: 30px; }
-
-    .card-table tbody tr {
-      border-bottom: 1px solid var(--border);
-    }
-    .card-table tbody tr:last-child { border-bottom: none; }
-    .card-table tbody tr:hover { background: var(--surface2); }
-    .card-table tbody tr:focus-within { background: var(--accent-bg); }
-
-    .card-table td { padding: 0; vertical-align: middle; }
-
-    .td-num {
-      font-size: 10px; color: var(--text-faint);
-      font-family: var(--font-mono);
-      text-align: center; padding: 0 6px;
-      user-select: none; white-space: nowrap;
-      vertical-align: top; padding-top: 9px;
-    }
-
-    .td-sep { width: 1px; background: var(--border); padding: 0; }
-
-    .cell-input {
-      display: block; width: 100%;
-      font-family: var(--font-sans);
-      font-size: 12.5px; line-height: 1.5;
-      border: none; background: transparent; color: var(--text);
-      outline: none; padding: 7px 8px;
-      white-space: pre-wrap; word-break: break-word;
-      cursor: text; resize: none;
-      overflow: hidden; height: auto;
-    }
-    .cell-input:focus { background: transparent; }
-
-    .td-del { width: 30px; }
-
-    .del-btn {
-      width: 30px; height: 34px;
-      border: none; background: transparent;
-      color: var(--text-faint); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: color 0.1s, background 0.1s; padding: 0;
-    }
-    .del-btn:hover { background: var(--danger-bg); color: var(--danger); }
 
     .error-box {
       background: var(--danger-bg);
       border: 1px solid rgba(220,38,38,0.2);
       border-radius: var(--radius);
-      padding: 10px 14px; font-size: 13px; color: var(--danger); margin-top: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--danger);
+      margin-top: 10px;
     }
 
     .hidden { display: none !important; }
 
     @media (max-width: 480px) {
       body { padding: 1.25rem 0.75rem 3rem; }
-      .stats-grid { gap: 6px; }
+      .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
       .stat-value { font-size: 18px; }
     }
   </style>
@@ -287,32 +441,17 @@
 
       <div class="card">
         <div class="editor-header">
-          <span class="editor-label-main">Cards</span>
-          <span class="editor-hint">Click any cell to edit &middot; trash to delete</span>
+          <span class="editor-label-main">Cards — edit or delete before export</span>
+          <span class="editor-hint">All cards shown</span>
         </div>
-
-        <table class="card-table">
-          <thead>
-            <tr>
-              <th class="col-num">#</th>
-              <th class="col-sep"></th>
-              <th>Front</th>
-              <th class="col-sep"></th>
-              <th>Back</th>
-              <th class="col-sep"></th>
-              <th class="col-del"></th>
-            </tr>
-          </thead>
-          <tbody id="card-editor"></tbody>
-        </table>
+        <div id="card-editor"></div>
 
         <div style="margin-top: 1rem; background: var(--surface2); border-radius: var(--radius); padding: 12px 14px;">
           <p style="font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 8px;">File name</p>
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; flex: 1; min-width: 160px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden;">
-              <input id="filename-input" type="text" value="anki_ready" placeholder="file name"
-                style="flex:1; border:none; background:transparent; padding: 8px 10px; font-size:13px; color:var(--text); outline:none; font-family:var(--font-mono);" />
-              <span style="padding: 8px 10px 8px 0; font-size:12px; color:var(--text-muted); font-family:var(--font-mono);">.csv</span>
+              <input id="filename-input" type="text" value="anki_ready" placeholder="file name" style="flex:1; border:none; background:transparent; padding: 8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'DM Mono',monospace;" />
+              <span style="padding: 8px 10px 8px 0; font-size:12px; color:var(--text-muted); font-family:'DM Mono',monospace;">.csv</span>
             </div>
             <button class="primary" onclick="downloadCSV()">Download</button>
           </div>
