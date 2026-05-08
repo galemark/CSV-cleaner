@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NotebookLM → Anki Bridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f6f2;
+      --surface: #ffffff;
+      --surface2: #f0ede8;
+      --border: rgba(0,0,0,0.1);
+      --border-strong: rgba(0,0,0,0.2);
+      --text: #1a1916;
+      --text-muted: #6b6860;
+      --text-faint: #a09d97;
+      --accent: #2563eb;
+      --accent-bg: #eff6ff;
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --warning: #d97706;
+      --warning-bg: #fffbeb;
+      --radius: 10px;
+      --radius-lg: 14px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141412;
+        --surface: #1e1d1a;
+        --surface2: #27261f;
+        --border: rgba(255,255,255,0.08);
+        --border-strong: rgba(255,255,255,0.16);
+        --text: #f0ede8;
+        --text-muted: #9a9690;
+        --text-faint: #5a5850;
+        --accent: #60a5fa;
+        --accent-bg: #1e2d45;
+        --success: #4ade80;
+        --success-bg: #14281e;
+        --danger: #f87171;
+        --danger-bg: #2c1414;
+        --warning: #fbbf24;
+        --warning-bg: #2a1f0a;
+      }
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent-bg);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-left: 46px;
+    }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      gap: 6px;
+      margin-left: 46px;
+      margin-top: 10px;
+    }
+
+    .mode-btn {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .mode-btn:hover:not(.active) {
+      background: var(--surface2);
+    }
+
+    .mode-desc {
+      margin-left: 46px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-faint);
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      border-left: 2px solid var(--accent);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .drop-zone {
+      border: 1.5px dashed var(--border-strong);
+      border-radius: var(--radius);
+      padding: 1.75rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      margin-bottom: 1rem;
+    }
+
+    .drop-zone:hover, .drop-zone.over {
+      background: var(--surface2);
+      border-color: var(--accent);
+    }
+
+    .drop-icon {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto 10px;
+      color: var(--text-muted);
+    }
+
+    .drop-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .drop-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider-text {
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+
+    textarea {
+      width: 100%;
+      height: 130px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      resize: vertical;
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--text-faint); }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.12s, transform 0.1s;
+    }
+
+    button:hover { background: var(--surface2); }
+    button:active { transform: scale(0.98); }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover { opacity: 0.9; }
+
+    button.ghost {
+      border-color: transparent;
+      color: var(--text-muted);
+    }
+
+    button.ghost:hover { background: var(--surface2); }
+
+    .file-name {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 500;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .stat-value.success { color: var(--success); }
+    .stat-value.warning { color: var(--warning); }
+    .stat-value.muted { color: var(--text-muted); font-size: 14px; padding-top: 4px; }
+
+    /* Anki hint box */
+    .anki-hint {
+      background: var(--warning-bg);
+      border: 1px solid rgba(217,119,6,0.2);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--warning);
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .anki-hint svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* ---- Card Editor ---- */
+    .editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .editor-label-main {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .editor-hint {
+      font-size: 11px;
+      color: var(--text-faint);
+    }
+
+    .editor-card {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      transition: border-color 0.15s;
+    }
+
+    .editor-card:focus-within {
+      border-color: var(--accent);
+    }
+
+    .editor-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .card-num {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-faint);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .math-badge {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--accent);
+      background: var(--accent-bg);
+      border: 1px solid rgba(37,99,235,0.15);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .delete-btn {
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-faint);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .delete-btn:hover {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: rgba(220,38,38,0.15);
+    }
+
+    .editor-field {
+      margin-bottom: 8px;
+    }
+
+    .editor-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .editor-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-family: 'DM Mono', monospace;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      height: auto;
+      min-height: 52px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      resize: vertical;
+      border-radius: 7px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .editor-textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .error-box {
+      background: var(--danger-bg);
+      border: 1px solid rgba(220,38,38,0.2);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--danger);
+      margin-top: 10px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 480px) {
+      body { padding: 1.25rem 0.75rem 3rem; }
+      .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .stat-value { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M3 5h12v9a1 1 0 01-1 1H4a1 1 0 01-1-1V5z" stroke="#2563eb" stroke-width="1.4"/>
+            <path d="M1.5 5h15M6 5V4a1 1 0 011-1h4a1 1 0 011 1v1" stroke="#2563eb" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M7 9.5h4M9 7.5v4" stroke="#2563eb" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1>NotebookLM → Anki Bridge</h1>
+      </div>
+      <p class="subtitle">Wraps LaTeX for native MathJax rendering in Anki</p>
+
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btn-mathjax" onclick="setMode('mathjax')">MathJax Wrapper</button>
+        <button class="mode-btn" id="btn-legacy" onclick="setMode('legacy')">Legacy Strip</button>
+      </div>
+      <div class="mode-desc" id="mode-desc">
+        Converts <code>$…$</code> → <code>\(…\)</code> and <code>$$…$$</code> → <code>\[…\]</code> for Anki's native MathJax. Enable <em>Allow HTML in fields</em> on import.
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="drop-zone" id="drop-zone"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="handleDragOver(event)"
+        ondragleave="handleDragLeave(event)"
+        ondrop="handleDrop(event)">
+        <svg class="drop-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 22V10M16 10l-4 4M16 10l4 4"/>
+          <path d="M26 21a6 6 0 00-5.5-6H20a8 8 0 10-15.7 2"/>
+        </svg>
+        <p class="drop-title">Drop your CSV here or tap to upload</p>
+        <p class="drop-sub">.csv files only</p>
+        <input type="file" id="file-input" accept=".csv" style="display:none" onchange="handleFile(event)">
+      </div>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-text">or paste below</span>
+        <div class="divider-line"></div>
+      </div>
+
+      <textarea id="csv-input" placeholder="Paste your CSV here — pipe-separated (Front | Back) or comma-separated (&quot;Front&quot;,&quot;Back&quot;) both work."></textarea>
+
+      <div class="actions">
+        <button class="primary" onclick="processCSV()">Process &amp; preview</button>
+        <button class="ghost" onclick="clearAll()">Clear</button>
+        <span class="file-name" id="file-name"></span>
+      </div>
+
+      <div class="error-box hidden" id="error-msg"></div>
+    </div>
+
+    <div id="results-section" class="hidden">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Cards</div>
+          <div class="stat-value" id="stat-cards">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" id="stat-label-fixes">Math Wraps</div>
+          <div class="stat-value success" id="stat-fixes">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Status</div>
+          <div class="stat-value muted" id="stat-status">—</div>
+        </div>
+      </div>
+
+      <div class="anki-hint hidden" id="anki-hint">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M7.5 5v3.5M7.5 10v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>Math delimiters detected. In Anki's import dialog: set <strong>Field separator</strong> to <strong>Pipe (|)</strong> and enable <strong>Allow HTML in fields</strong> so MathJax renders correctly.</span>
+      </div>
+
+      <div class="card">
+        <div class="editor-header">
+          <span class="editor-label-main">Cards — edit or delete before export</span>
+          <span class="editor-hint" id="editor-hint-count">All cards shown</span>
+        </div>
+        <div id="card-editor"></div>
+
+        <div style="margin-top: 1rem; background: var(--surface2); border-radius: var(--radius); padding: 12px 14px;">
+          <p style="font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 8px;">File name</p>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; flex: 1; min-width: 160px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow: hidden;">
+              <input id="filename-input" type="text" value="anki_ready" placeholder="file name"
+                style="flex:1; border:none; background:transparent; padding: 8px 10px; font-size:13px; color:var(--text); outline:none; font-family:'DM Mono',monospace;" />
+              <span style="padding: 8px 10px 8px 0; font-size:12px; color:var(--text-muted); font-family:'DM Mono',monospace;">.csv</span>
+            </div>
+            <button class="primary" onclick="downloadCSV()">Download</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────
+    //  State
+    // ─────────────────────────────────────────────
+    let cleanedCSV = '';
+    let editableCards = [];
+    let currentMode = 'mathjax'; // 'mathjax' | 'legacy'
+
+    // ─────────────────────────────────────────────
+    //  Mode toggle
+    // ─────────────────────────────────────────────
+    const modeDescs = {
+      mathjax: 'Converts <code>$…$</code> → <code>\\(…\\)</code> and <code>$$…$$</code> → <code>\\[…\\]</code> for Anki\'s native MathJax. Uses <code>|</code> as field delimiter. Enable <em>Allow HTML in fields</em> on import.',
+      legacy:  'Strips all LaTeX and converts math notation to plain-text Unicode (original behavior). Uses <code>|</code> as field delimiter. No MathJax needed.'
+    };
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('btn-mathjax').classList.toggle('active', mode === 'mathjax');
+      document.getElementById('btn-legacy').classList.toggle('active', mode === 'legacy');
+      document.getElementById('mode-desc').innerHTML = modeDescs[mode];
+      document.getElementById('stat-label-fixes') && (document.getElementById('stat-label-fixes').textContent = mode === 'mathjax' ? 'Math Wraps' : 'Fixes');
+    }
+
+    // ─────────────────────────────────────────────
+    //  Drag & drop / file reading
+    // ─────────────────────────────────────────────
+    function handleDragOver(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('over');
+    }
+    function handleDragLeave(e) {
+      document.getElementById('drop-zone').classList.remove('over');
+    }
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.csv')) readFile(file);
+    }
+    function handleFile(e) {
+      const file = e.target.files[0];
+      if (file) readFile(file);
+    }
+    function readFile(file) {
+      document.getElementById('file-name').textContent = file.name;
+      const baseName = file.name.replace(/\.csv$/i, '');
+      document.getElementById('filename-input').value = baseName;
+      const reader = new FileReader();
+      reader.onload = (e) => { document.getElementById('csv-input').value = e.target.result; };
+      reader.readAsText(file);
+    }
+
+    // ─────────────────────────────────────────────
+    //  MathJax Wrapper mode — cleanText
+    //  Preserves LaTeX, just rewraps delimiters.
+    // ─────────────────────────────────────────────
+    function cleanTextMathJax(text) {
+      let fixes = 0;
+      const original = text;
+
+      // 1. Block math: $$...$$ → \[...\]  (multiline-safe per cell)
+      //    Output uses single backslash — JS string '\\[' writes literal \[
+      text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, inner) => {
+        fixes++;
+        return String.raw`\[` + inner.trim() + String.raw`\]`;
+      });
+
+      // 2. Inline math: $...$ → \(...\)
+      //    Regex breakdown:
+      //      \$ — opening dollar
+      //      (?!\d[\d.,]*\s) — negative lookahead: skip bare currency like $150.00
+      //      ([^\s$](?:[^$]*[^\s$])?) — content: no leading/trailing whitespace
+      //      \$ — closing dollar
+      //    String.raw guarantees a single literal backslash in the CSV output.
+      text = text.replace(/\$(?!\d[\d.,]*(?:\s|$))([^\s$](?:[^$]*[^\s$])?)\$/g, (_, equation) => {
+        fixes++;
+        return String.raw`\(` + equation.trim() + String.raw`\)`;
+      });
+
+      // 3. Legacy noise cleanup (keeps LaTeX structure inside \(...\) intact)
+      //    Only clean things that are definitively noise OUTSIDE math delimiters.
+      text = cleanLegacyEscapes(text);
+
+      return { cleaned: text, fixes: text !== original ? Math.max(fixes, 1) : 0 };
+    }
+
+    // Cleans AI-generated escape noise that isn't real math:
+    //   \%  →  %     \_  →  _     \& → &    \# → #
+    // Does NOT touch content inside \(...\) or \[...\].
+    function cleanLegacyEscapes(text) {
+      // Tokenize: split on \(...\) and \[...\] to preserve them
+      const parts = [];
+      const mathPattern = /(\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\))/g;
+      let last = 0, m;
+      while ((m = mathPattern.exec(text)) !== null) {
+        if (m.index > last) parts.push({ type: 'text', val: text.slice(last, m.index) });
+        parts.push({ type: 'math', val: m[0] });
+        last = m.index + m[0].length;
+      }
+      if (last < text.length) parts.push({ type: 'text', val: text.slice(last) });
+
+      return parts.map(p => {
+        if (p.type === 'math') return p.val;
+        return p.val
+          .replace(/\\%/g, '%')
+          .replace(/\\_/g, '_')
+          .replace(/\\&/g, '&')
+          .replace(/\\#/g, '#')
+          .replace(/\\\$/g, '$');  // escaped dollar that isn't math
+      }).join('');
+    }
+
+    // ─────────────────────────────────────────────
+    //  Legacy Strip mode — cleanText (original behavior)
+    // ─────────────────────────────────────────────
+    function cleanTextLegacy(text) {
+      let fixes = 0;
+      const original = text;
+
+      // Named text wrappers WITH braces
+      text = text.replace(/\$?\\text\{([^}]*)\}\$?/g,   (_, m) => { fixes++; return m; });
+      text = text.replace(/\$?\\mathrm\{([^}]*)\}\$?/g,  (_, m) => { fixes++; return m; });
+      text = text.replace(/\$?\\mathbf\{([^}]*)\}\$?/g,  (_, m) => { fixes++; return m; });
+      text = text.replace(/\$?\\textbf\{([^}]*)\}\$?/g,  (_, m) => { fixes++; return m; });
+      text = text.replace(/\$?\\textit\{([^}]*)\}\$?/g,  (_, m) => { fixes++; return m; });
+
+      // \text without braces
+      text = text.replace(/\\text\s+(\S+)/g, (_, m) => { fixes++; return ' ' + m; });
+      text = text.replace(/\\text(\s*)/g, (_, sp) => { fixes++; return sp || ' '; });
+
+      // Escaped percent
+      text = text.replace(/\\%/g, () => { fixes++; return '%'; });
+
+      // Fractions: \frac{a}{b} → a/b
+      text = text.replace(/\$?\\frac\{([^}]*)\}\{([^}]*)\}\$?/g, (_, a, b) => { fixes++; return `${a}/${b}`; });
+
+      // Degree symbol
+      text = text.replace(/\$?(\d+)\^\{\\circ\}\$?/g, (_, n) => { fixes++; return `${n}\u00B0`; });
+      text = text.replace(/\$?\\circ\$?/g, () => { fixes++; return '\u00B0'; });
+
+      // Superscripts
+      const supMap = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻' };
+      text = text.replace(/\$?(\w+)\^\{([^}]+)\}\$?/g, (_, base, exp) => {
+        fixes++;
+        return base + exp.split('').map(c => supMap[c] || c).join('');
+      });
+      text = text.replace(/\$?(\w+)\^(\w)\$?/g, (_, base, exp) => {
+        fixes++;
+        return base + (supMap[exp] || '^' + exp);
+      });
+
+      // Subscripts
+      const subMap = { '0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉','+':'₊','-':'₋' };
+      text = text.replace(/\$?(\w+)_\{([^}]+)\}\$?/g, (_, base, sub) => {
+        fixes++;
+        return base + sub.split('').map(c => subMap[c] || c).join('');
+      });
+      text = text.replace(/\$?(\w+)_(\w)\$?/g, (_, base, sub) => {
+        fixes++;
+        return base + (subMap[sub] || '_' + sub);
+      });
+
+      // Greek letters
+      const greek = {
+        alpha:'α', beta:'β', gamma:'γ', delta:'δ', epsilon:'ε', zeta:'ζ',
+        eta:'η', theta:'θ', iota:'ι', kappa:'κ', lambda:'λ', mu:'μ',
+        nu:'ν', xi:'ξ', pi:'π', rho:'ρ', sigma:'σ', tau:'τ',
+        upsilon:'υ', phi:'φ', chi:'χ', psi:'ψ', omega:'ω',
+        Alpha:'Α', Beta:'Β', Gamma:'Γ', Delta:'Δ', Epsilon:'Ε',
+        Theta:'Θ', Lambda:'Λ', Mu:'Μ', Pi:'Π', Sigma:'Σ',
+        Phi:'Φ', Psi:'Ψ', Omega:'Ω'
+      };
+      text = text.replace(/\$?\\([a-zA-Z]+)\$?/g, (match, name) => {
+        if (greek[name]) { fixes++; return greek[name]; }
+        return match;
+      });
+
+      // Math symbols via regex replace
+      const mathSymbols = [
+        [/\\times/g,       '×'],  [/\\div/g,         '÷'],
+        [/\\pm/g,          '±'],  [/\\leq/g,         '≤'],
+        [/\\geq/g,         '≥'],  [/\\neq/g,         '≠'],
+        [/\\approx/g,      '≈'],  [/\\rightarrow/g,  '→'],
+        [/\\leftarrow/g,   '←'],  [/\\to\b/g,        '→'],
+        [/\\infty/g,       '∞'],  [/\\degree/g,      '°']
+      ];
+      mathSymbols.forEach(([re, sym]) => {
+        const before = text;
+        text = text.replace(re, sym);
+        if (text !== before) fixes++;
+      });
+
+      // Remaining paired $...$
+      text = text.replace(/\$([^$\n]{1,30})\$/g, (_, m) => { fixes++; return m.trim(); });
+
+      // Strip remaining lone $ signs
+      text = text.replace(/\$/g, () => { fixes++; return ''; });
+
+      // Cleanup leftover LaTeX noise
+      text = text.replace(/\\\\/g, ' ');
+      text = text.replace(/\\[,;!]/g, ' ');
+      text = text.replace(/[{}]/g, '');
+      text = text.replace(/\s{2,}/g, ' ').trim();
+
+      return { cleaned: text, fixes: text !== original ? Math.max(fixes, 1) : 0 };
+    }
+
+    // ─────────────────────────────────────────────
+    //  Dispatch
+    // ─────────────────────────────────────────────
+    function cleanText(text) {
+      return currentMode === 'mathjax' ? cleanTextMathJax(text) : cleanTextLegacy(text);
+    }
+
+    // ─────────────────────────────────────────────
+    //  Parser — auto-detects pipe (|) or comma (,)
+    //  delimiter per line, then splits on the FIRST
+    //  occurrence only.  Quoted RFC-4180 fields are
+    //  unwrapped so an inner pipe/comma is kept as
+    //  literal text and does NOT act as a delimiter.
+    //  Output is always written as pipe-delimited
+    //  (PSV) so Anki's "Pipe (|)" setting works.
+    // ─────────────────────────────────────────────
+    const OUT_DELIM = '|'; // delimiter used in the exported file
+
+    // Unquote a single RFC-4180 cell string (strips outer quotes, unescapes "").
+    function unquoteCell(s) {
+      s = s.trim();
+      if (s.startsWith('"') && s.endsWith('"')) {
+        return s.slice(1, -1).replace(/""/g, '"');
+      }
+      return s;
+    }
+
+    // Split one line into exactly two cells using the detected delimiter.
+    // Respects RFC-4180 quoting: a delimiter inside "…" is NOT a split point.
+    function splitLine(line, delim) {
+      // Walk char-by-char to find the first unquoted delimiter.
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          // Toggle quote state; handle escaped "" by skipping the next char.
+          if (inQuotes && line[i + 1] === '"') { i++; continue; }
+          inQuotes = !inQuotes;
+        } else if (!inQuotes && ch === delim) {
+          return [unquoteCell(line.slice(0, i)), unquoteCell(line.slice(i + 1))];
+        }
+      }
+      // No delimiter found — entire line is the front, back is empty.
+      return [unquoteCell(line), ''];
+    }
+
+    function parseCSV(raw) {
+      const rows = [];
+      for (const line of raw.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Detect delimiter: prefer pipe if present outside quotes, else comma.
+        let delim = ',';
+        let inQ = false;
+        for (let i = 0; i < trimmed.length; i++) {
+          if (trimmed[i] === '"') {
+            if (inQ && trimmed[i + 1] === '"') { i++; continue; }
+            inQ = !inQ;
+          } else if (!inQ && trimmed[i] === '|') { delim = '|'; break; }
+        }
+
+        const [front, back] = splitLine(trimmed, delim);
+        if (front || back) rows.push([front, back]);
+      }
+      return rows;
+    }
+
+    function toCSVRow(cells) {
+      // Output is always pipe-delimited for Anki.
+      // Quote any cell that contains a pipe, a double-quote, or a newline.
+      return cells.map(c => {
+        if (c.includes(OUT_DELIM) || c.includes('"') || c.includes('\n')) {
+          return `"${c.replace(/"/g, '""')}"`;
+        }
+        return c;
+      }).join(OUT_DELIM);
+    }
+
+    // ─────────────────────────────────────────────
+    //  Main process action
+    // ─────────────────────────────────────────────
+    function processCSV() {
+      const input = document.getElementById('csv-input').value.trim();
+      const errEl = document.getElementById('error-msg');
+      errEl.classList.add('hidden');
+
+      if (!input) {
+        errEl.textContent = 'Please paste or upload a CSV first.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      const rows = parseCSV(input);
+      if (rows.length === 0) {
+        errEl.textContent = 'No valid rows found. Make sure your CSV is formatted correctly.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      let totalFixes = 0;
+      let hasMath = false;
+
+      const cleanedRows = rows.map(row =>
+        row.map(cell => {
+          const { cleaned, fixes } = cleanText(cell);
+          totalFixes += fixes;
+          if (currentMode === 'mathjax' && /\\\(|\\\[/.test(cleaned)) hasMath = true;
+          return cleaned;
+        })
+      );
+
+      editableCards = cleanedRows.map(row => ({ front: row[0] || '', back: row[1] || '', deleted: false }));
+
+      // Stats
+      document.getElementById('stat-cards').textContent = rows.length;
+      document.getElementById('stat-fixes').textContent = totalFixes;
+      const statusEl = document.getElementById('stat-status');
+      if (currentMode === 'mathjax') {
+        statusEl.textContent = totalFixes > 0 ? 'Wrapped ✓' : 'Clean ✓';
+      } else {
+        statusEl.textContent = totalFixes > 0 ? 'Fixed ✓' : 'Clean ✓';
+      }
+      statusEl.className = 'stat-value ' + (totalFixes > 0 ? 'success' : 'muted');
+      // Keep the middle-column label in sync with the active mode
+      const fixLabel = document.getElementById('stat-label-fixes');
+      if (fixLabel) fixLabel.textContent = currentMode === 'mathjax' ? 'Math Wraps' : 'Fixes';
+
+      // Anki hint (only for MathJax mode when math was detected)
+      const hintEl = document.getElementById('anki-hint');
+      hintEl.classList.toggle('hidden', !(currentMode === 'mathjax' && hasMath));
+
+      renderCardEditor();
+      rebuildCSV();
+      document.getElementById('results-section').classList.remove('hidden');
+    }
+
+    // ─────────────────────────────────────────────
+    //  Card editor
+    // ─────────────────────────────────────────────
+    function renderCardEditor() {
+      const container = document.getElementById('card-editor');
+      container.innerHTML = '';
+
+      editableCards.forEach((card, idx) => {
+        if (card.deleted) return;
+
+        const hasMath = /\\\(|\\\[/.test(card.front + card.back);
+
+        const el = document.createElement('div');
+        el.className = 'editor-card';
+        el.dataset.idx = idx;
+        el.innerHTML = `
+          <div class="editor-card-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="card-num">Card ${idx + 1}</span>
+              ${hasMath && currentMode === 'mathjax' ? '<span class="math-badge">∑ math</span>' : ''}
+            </div>
+            <button class="delete-btn" onclick="deleteCard(${idx})" title="Delete card">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M3.5 3.5l.7 7.5a.5.5 0 00.5.5h4.6a.5.5 0 00.5-.5l.7-7.5"/>
+              </svg>
+            </button>
+          </div>
+          <div class="editor-field">
+            <label class="editor-label">Front</label>
+            <textarea class="editor-textarea" data-idx="${idx}" data-field="front" oninput="handleCardEdit(this)">${escapeHTML(card.front)}</textarea>
+          </div>
+          <div class="editor-field">
+            <label class="editor-label">Back</label>
+            <textarea class="editor-textarea" data-idx="${idx}" data-field="back" oninput="handleCardEdit(this)">${escapeHTML(card.back)}</textarea>
+          </div>
+        `;
+        container.appendChild(el);
+      });
+
+      updateCardCount();
+    }
+
+    function handleCardEdit(el) {
+      const idx = parseInt(el.dataset.idx);
+      const field = el.dataset.field;
+      editableCards[idx][field] = el.value;
+      rebuildCSV();
+    }
+
+    function deleteCard(idx) {
+      editableCards[idx].deleted = true;
+      renderCardEditor();
+      rebuildCSV();
+      updateCardCount();
+    }
+
+    function updateCardCount() {
+      const active = editableCards.filter(c => !c.deleted).length;
+      document.getElementById('stat-cards').textContent = active;
+      document.getElementById('editor-hint-count').textContent = `${active} card${active !== 1 ? 's' : ''}`;
+    }
+
+    function rebuildCSV() {
+      const rows = editableCards
+        .filter(c => !c.deleted)
+        .map(c => toCSVRow([c.front, c.back]));
+      cleanedCSV = rows.join('\n');
+    }
+
+    function escapeHTML(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // ─────────────────────────────────────────────
+    //  Download
+    // ─────────────────────────────────────────────
+    function downloadCSV() {
+      if (!cleanedCSV) return;
+      const rawName = document.getElementById('filename-input').value.trim() || 'anki_ready';
+      const safeName = rawName.replace(/[\/\\:*?"<>|]/g, '').replace(/\s+/g, '_') || 'anki_ready';
+      const blob = new Blob([cleanedCSV], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeName}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ─────────────────────────────────────────────
+    //  Clear
+    // ─────────────────────────────────────────────
+    function clearAll() {
+      document.getElementById('csv-input').value = '';
+      document.getElementById('file-name').textContent = '';
+      document.getElementById('file-input').value = '';
+      document.getElementById('filename-input').value = 'anki_ready';
+      document.getElementById('results-section').classList.add('hidden');
+      document.getElementById('error-msg').classList.add('hidden');
+      cleanedCSV = '';
+      editableCards = [];
+    }
+  </script>
+</body>
+</html>
