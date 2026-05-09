@@ -621,13 +621,10 @@
       });
 
       // 2. Inline math: $...$ → \(...\)
-      //    Regex breakdown:
-      //      \$ — opening dollar
-      //      (?!\d[\d.,]*\s) — negative lookahead: skip bare currency like $150.00
-      //      ([^\s$](?:[^$]*[^\s$])?) — content: no leading/trailing whitespace
-      //      \$ — closing dollar
-      //    String.raw guarantees a single literal backslash in the CSV output.
-      text = text.replace(/\$(?!\d[\d.,]*(?:\s|$))([^\s$](?:[^$]*[^\s$])?)\$/g, (_, equation) => {
+      //    Any paired $…$ is treated as math — real currency in prose never has a
+      //    closing $, so the pairing itself is the signal. No currency lookahead needed.
+      //    Content must have no leading/trailing whitespace (prevents lone $ signs).
+      text = text.replace(/\$([^\s$](?:[^$]*[^\s$])?)\$/g, (_, equation) => {
         fixes++;
         return String.raw`\(` + equation.trim() + String.raw`\)`;
       });
@@ -693,13 +690,13 @@
       text = text.replace(/\$?(\d+)\^\{\\circ\}\$?/g, (_, n) => { fixes++; return `${n}\u00B0`; });
       text = text.replace(/\$?\\circ\$?/g, () => { fixes++; return '\u00B0'; });
 
-      // Superscripts
+      // Superscripts — base can be a word OR a plain number (including decimals like 1.0)
       const supMap = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻' };
-      text = text.replace(/\$?(\w+)\^\{([^}]+)\}\$?/g, (_, base, exp) => {
+      text = text.replace(/\$?([\w.]+)\^\{([^}]+)\}\$?/g, (_, base, exp) => {
         fixes++;
         return base + exp.split('').map(c => supMap[c] || c).join('');
       });
-      text = text.replace(/\$?(\w+)\^(\w)\$?/g, (_, base, exp) => {
+      text = text.replace(/\$?([\w.]+)\^(\w)\$?/g, (_, base, exp) => {
         fixes++;
         return base + (supMap[exp] || '^' + exp);
       });
